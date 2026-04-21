@@ -258,12 +258,15 @@ export default function Home() {
     if (cuisines.size === 0) { setError("Pick at least one cuisine"); return; }
     setLoading(true); setError(""); setPlan(null); setRawPlan("");
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildContext()),
-        signal: AbortSignal.timeout(120000),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
       const data = await res.json();
       if (typeof data.plan === "object" && data.plan.days) {
