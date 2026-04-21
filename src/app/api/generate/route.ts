@@ -47,6 +47,7 @@ CRITICAL RULES:
 4. At least 3 lunches should use leftovers/batch items
 5. Vary calories naturally (not every breakfast the same calories)
 6. Stick STRICTLY to ${cuisines.join("/")} cuisine — no fusion or generic "healthy bowls"
+7. For snacks: only suggest things that are either in the available ingredients, simple to make (with recipe), or common store-bought items. Don't assume specialty items like murukku or pappadam are available — add them to the grocery list if used.
 
 Respond with ONLY valid JSON:
 {
