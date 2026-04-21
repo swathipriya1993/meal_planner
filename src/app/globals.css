@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { font-family: 'Inter', system-ui, sans-serif; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Smooth range slider */
+input[type="range"] { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: #e5e7eb; outline: none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #059669; cursor: pointer; box-shadow: 0 2px 6px rgba(5,150,105,0.3); transition: transform 0.15s; }
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #059669; cursor: pointer; border: none; box-shadow: 0 2px 6px rgba(5,150,105,0.3); }
+
+/* Checkbox styling */
+input[type="checkbox"] { accent-color: #059669; }
+
+/* Pulse animation for loading */
+@keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+/* Shimmer for loading state */
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.shimmer { background: linear-gradient(90deg, #f0fdf4 25%, #d1fae5 50%, #f0fdf4 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
