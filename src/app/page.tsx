@@ -499,7 +499,7 @@ export default function Home() {
                   {plan.groceryList.map((item, i) => (
                     <label key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer group transition-colors">
                       <input type="checkbox" className="w-5 h-5 rounded-lg border-2 border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                      <span className="text-sm text-gray-700 group-has-[:checked]:line-through group-has-[:checked]:text-gray-400 transition-all">{item}</span>
+                      <span className="text-sm text-gray-700 peer-checked:line-through peer-checked:text-gray-400 transition-all">{item}</span>
                     </label>
                   ))}
                 </div>
