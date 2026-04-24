@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Set OPENAI_API_KEY in .env.local" }, { status: 500 });
   }
 
-  const { cuisines, diets, goals, allergies, proteins, carbs, pantry, extraIngredients, mustInclude, people, calories, maxPrepTime } = await req.json();
+  const { cuisines, diets, goals, allergies, proteins, carbs, pantry, extraIngredients, mustInclude, people, calories, maxPrepTime, proteinTarget } = await req.json();
 
   const veggieList = cuisines.map((c: string) => CUISINE_VEGGIES[c] ? `${c}: ${CUISINE_VEGGIES[c]}` : "").filter(Boolean).join(". ");
 
@@ -39,6 +39,7 @@ ${diets.length ? `- Diet: ${diets.join(", ")}` : ""}
 ${goals.length ? `- Goals: ${goals.join(", ")}` : ""}
 ${allergies.length ? `- AVOID: ${allergies.join(", ")}` : ""}
 - For ${people} person(s), ~${calories} cal/day, max ${maxPrepTime} min prep per meal
+${proteinTarget ? `- DAILY PROTEIN TARGET: ~${proteinTarget}g protein per day. Prioritize high-protein ingredients to hit this target.` : ""}
 
 CRITICAL RULES:
 1. Use REAL dish names from ${cuisines.join("/")} cuisine (e.g., Moussaka not "eggplant bake", Pad Kra Pao not "basil stir-fry", Sambar not "lentil soup")
@@ -55,10 +56,10 @@ Respond with ONLY valid JSON:
   "days": [
     {
       "day": "Monday",
-      "breakfast": {"meal": "Authentic dish name (brief description)", "calories": 310},
-      "lunch": {"meal": "Dish name — uses Sunday's batch X", "calories": 490},
-      "dinner": {"meal": "Dish name (key ingredients)", "calories": 440},
-      "snack": {"meal": "Cuisine-appropriate snack", "calories": 120}
+      "breakfast": {"meal": "Authentic dish name (brief description)", "calories": 310, "protein": 22, "fiber": 5},
+      "lunch": {"meal": "Dish name — uses Sunday's batch X", "calories": 490, "protein": 35, "fiber": 8},
+      "dinner": {"meal": "Dish name (key ingredients)", "calories": 440, "protein": 30, "fiber": 6},
+      "snack": {"meal": "Cuisine-appropriate snack", "calories": 120, "protein": 8, "fiber": 3}
     }
   ],
   "recipes": [

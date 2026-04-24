@@ -54,7 +54,7 @@ function Chips({ options, selected, toggle }: {
   );
 }
 
-type Meal = { meal: string; calories: number };
+type Meal = { meal: string; calories: number; protein: number; fiber: number };
 type DayPlan = { day: string; breakfast: Meal; lunch: Meal; dinner: Meal; snack: Meal };
 type Recipe = { name: string; time: string; ingredients: string[]; steps: string[] };
 type PlanData = { mealPrep: string; days: DayPlan[]; recipes: Recipe[]; groceryList: string[] };
@@ -83,18 +83,20 @@ function MealTable({ days, onSwap, swappingKey }: {
           <tbody>
             {days.map((d, i) => {
               const total = d.breakfast.calories + d.lunch.calories + d.dinner.calories + d.snack.calories;
+              const totalP = (d.breakfast.protein||0) + (d.lunch.protein||0) + (d.dinner.protein||0) + (d.snack.protein||0);
               return (
                 <tr key={d.day} className={`${i % 2 === 0 ? "bg-white" : "bg-emerald-50/50"} border-b border-gray-100 hover:bg-emerald-50 transition-colors`}>
                   <td className="p-3">
                     <div className="font-bold text-emerald-800 text-xs">{d.day.slice(0, 3)}</div>
                     <div className="text-[10px] text-emerald-600">{total} cal</div>
+                    <div className="text-[10px] text-blue-600">{totalP}g P</div>
                   </td>
                   {(["breakfast", "lunch", "dinner", "snack"] as const).map((type) => {
                     const meal = d[type];
                     return (
                       <td key={type} className="p-3 group relative">
                         <div className="font-medium text-gray-800 text-xs leading-snug pr-6">{meal.meal}</div>
-                        <div className="text-[10px] text-emerald-600 mt-0.5">{meal.calories} cal</div>
+                        <div className="text-[10px] text-emerald-600 mt-0.5">{meal.calories} cal · {meal.protein||0}g P · {meal.fiber||0}g F</div>
                         <button onClick={() => onSwap(d.day, type)}
                           disabled={swappingKey === `${d.day}-${type}`}
                           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg bg-white border border-gray-200 text-[10px] text-gray-400 hover:text-emerald-600 hover:border-emerald-300 transition-all shadow-sm flex items-center justify-center"
@@ -113,6 +115,7 @@ function MealTable({ days, onSwap, swappingKey }: {
       <div className="sm:hidden space-y-3">
         {days.map((d) => {
           const total = d.breakfast.calories + d.lunch.calories + d.dinner.calories + d.snack.calories;
+          const totalP = (d.breakfast.protein||0) + (d.lunch.protein||0) + (d.dinner.protein||0) + (d.snack.protein||0);
           const meals = [
             { type: "breakfast", label: "Breakfast", icon: "🌅", meal: d.breakfast },
             { type: "lunch", label: "Lunch", icon: "☀️", meal: d.lunch },
@@ -123,7 +126,7 @@ function MealTable({ days, onSwap, swappingKey }: {
             <div key={d.day} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-gray-100">
                 <span className="font-bold text-gray-800 text-sm">{d.day}</span>
-                <span className="text-xs font-semibold text-emerald-600 bg-white px-2 py-0.5 rounded-full shadow-sm">{total} cal</span>
+                <span className="text-xs font-semibold text-emerald-600 bg-white px-2 py-0.5 rounded-full shadow-sm">{total} cal · {totalP}g P</span>
               </div>
               <div className="divide-y divide-gray-50">
                 {meals.map(({ type, label, icon, meal }) => (
@@ -131,7 +134,7 @@ function MealTable({ days, onSwap, swappingKey }: {
                     <div className="flex-1 min-w-0">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{icon} {label}</span>
                       <p className="text-sm font-medium text-gray-800 leading-snug">{meal.meal}</p>
-                      <span className="text-xs text-emerald-600">{meal.calories} cal</span>
+                      <span className="text-xs text-emerald-600">{meal.calories} cal · {meal.protein||0}g P · {meal.fiber||0}g F</span>
                     </div>
                     <button onClick={() => onSwap(d.day, type)}
                       disabled={swappingKey === `${d.day}-${type}`}
@@ -224,6 +227,7 @@ export default function Home() {
   const [people, setPeople] = useState("1");
   const [calories, setCalories] = useState("1800");
   const [maxPrepTime, setMaxPrepTime] = useState("30");
+  const [proteinTarget, setProteinTarget] = useState("");
   const [plan, setPlan] = useState<PlanData | null>(null);
   const [rawPlan, setRawPlan] = useState("");
   const [loading, setLoading] = useState(false);
@@ -252,6 +256,7 @@ export default function Home() {
     allergies: [...allergies], proteins: [...proteins], carbs: [...carbs],
     pantry: [...pantry], extraIngredients, mustInclude,
     people: Number(people), calories: Number(calories), maxPrepTime: Number(maxPrepTime),
+    proteinTarget: proteinTarget ? Number(proteinTarget) : null,
   });
 
   const generate = async () => {
@@ -303,6 +308,8 @@ export default function Home() {
 
   const totalCals = plan?.days.map(d => d.breakfast.calories + d.lunch.calories + d.dinner.calories + d.snack.calories);
   const avgCals = totalCals ? Math.round(totalCals.reduce((a, b) => a + b, 0) / 7) : 0;
+  const totalProts = plan?.days.map(d => (d.breakfast.protein||0) + (d.lunch.protein||0) + (d.dinner.protein||0) + (d.snack.protein||0));
+  const avgProt = totalProts ? Math.round(totalProts.reduce((a, b) => a + b, 0) / 7) : 0;
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-6 pb-20">
@@ -408,6 +415,15 @@ export default function Home() {
                 ))}
               </div>
             </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-500">Daily protein target</span>
+                <span className="text-sm font-bold text-emerald-600">{proteinTarget ? `${proteinTarget}g` : "Auto"}</span>
+              </div>
+              <input type="range" min="0" max="250" step="10" value={proteinTarget || "0"}
+                onChange={(e) => setProteinTarget(e.target.value === "0" ? "" : e.target.value)} className="w-full" />
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1"><span>Auto</span><span>120g</span><span>250g</span></div>
+            </div>
           </div>
         </Section>
       </div>
@@ -450,6 +466,10 @@ export default function Home() {
                 <div className="flex-1 bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
                   <div className="text-lg font-black text-emerald-700">{avgCals}</div>
                   <div className="text-[10px] font-semibold text-emerald-600 uppercase">avg cal/day</div>
+                </div>
+                <div className="flex-1 bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
+                  <div className="text-lg font-black text-blue-700">{avgProt}g</div>
+                  <div className="text-[10px] font-semibold text-blue-600 uppercase">avg protein</div>
                 </div>
                 <div className="flex-1 bg-teal-50 rounded-xl p-3 text-center border border-teal-100">
                   <div className="text-lg font-black text-teal-700">{plan.recipes.length}</div>

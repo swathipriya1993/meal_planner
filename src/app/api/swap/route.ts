@@ -15,7 +15,7 @@ ${goals.length ? `Goals: ${goals.join(", ")}` : ""}
 ${allergies.length ? `Avoid: ${allergies.join(", ")}` : ""}
 Daily target: ~${calories} cal. Max prep: ${maxPrepTime} min.
 Must be a different dish, authentic to ${cuisines.join("/")}.
-Respond ONLY with JSON: {"meal": "Dish name (brief description)", "calories": 350}`;
+Respond ONLY with JSON: {"meal": "Dish name (brief description)", "calories": 350, "protein": 25, "fiber": 5}`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
