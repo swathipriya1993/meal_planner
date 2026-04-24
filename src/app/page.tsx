@@ -404,6 +404,15 @@ export default function Home() {
               <div className="flex justify-between text-[10px] text-gray-400 mt-1"><span>10 min</span><span>30 min</span><span>60 min</span></div>
             </div>
             <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-500">Daily protein target</span>
+                <span className="text-sm font-bold text-emerald-600">{proteinTarget ? `${proteinTarget}g` : "Auto"}</span>
+              </div>
+              <input type="range" min="0" max="250" step="10" value={proteinTarget || "0"}
+                onChange={(e) => setProteinTarget(e.target.value === "0" ? "" : e.target.value)} className="w-full" />
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1"><span>Auto</span><span>120g</span><span>250g</span></div>
+            </div>
+            <div>
               <span className="text-xs font-semibold text-gray-500 block mb-2">People</span>
               <div className="flex gap-2">
                 {[1,2,3,4,5,6].map(n => (
@@ -414,15 +423,6 @@ export default function Home() {
                     }`}>{n}</button>
                 ))}
               </div>
-            </div>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-xs font-semibold text-gray-500">Daily protein target</span>
-                <span className="text-sm font-bold text-emerald-600">{proteinTarget ? `${proteinTarget}g` : "Auto"}</span>
-              </div>
-              <input type="range" min="0" max="250" step="10" value={proteinTarget || "0"}
-                onChange={(e) => setProteinTarget(e.target.value === "0" ? "" : e.target.value)} className="w-full" />
-              <div className="flex justify-between text-[10px] text-gray-400 mt-1"><span>Auto</span><span>120g</span><span>250g</span></div>
             </div>
           </div>
         </Section>
