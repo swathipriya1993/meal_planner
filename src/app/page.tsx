@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const CUISINES = [
   "South Indian", "North Indian", "Persian", "Mediterranean",
@@ -151,7 +151,7 @@ function MealTable({ days, onSwap, swappingKey }: {
   );
 }
 
-function RecipeCard({ recipe, index }: { recipe: Recipe; index: number }) {
+function RecipeCard({ recipe, index, onCook }: { recipe: Recipe; index: number; onCook: (r: Recipe) => void }) {
   const [open, setOpen] = useState(false);
   const colors = ["bg-emerald-500", "bg-teal-500", "bg-cyan-500", "bg-green-500", "bg-lime-500", "bg-amber-500"];
   return (
@@ -196,8 +196,224 @@ function RecipeCard({ recipe, index }: { recipe: Recipe; index: number }) {
               ))}
             </ol>
           </div>
+          <button onClick={() => onCook(recipe)}
+            className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all">
+            👨‍🍳 Start Cook Mode
+          </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function CookMode({ recipe, onExit }: { recipe: Recipe; onExit: () => void }) {
+  const [step, setStep] = useState(0);
+  const [timers, setTimers] = useState<Record<number, number>>({});
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [subQuery, setSubQuery] = useState("");
+  const [subResult, setSubResult] = useState("");
+  const [subLoading, setSubLoading] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const intervalsRef = useRef<Record<number, NodeJS.Timeout>>({});
+
+  const speak = useCallback((text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9;
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    window.speechSynthesis.speak(u);
+  }, []);
+
+  const readStep = useCallback((i: number) => {
+    if (i >= 0 && i < recipe.steps.length) {
+      speak(`Step ${i + 1}. ${recipe.steps[i]}`);
+    }
+  }, [recipe.steps, speak]);
+
+  const goNext = useCallback(() => {
+    setStep(s => { const n = Math.min(s + 1, recipe.steps.length - 1); readStep(n); return n; });
+  }, [recipe.steps.length, readStep]);
+
+  const goPrev = useCallback(() => {
+    setStep(s => { const n = Math.max(s - 1, 0); readStep(n); return n; });
+  }, [readStep]);
+
+  const startTimer = useCallback((minutes: number) => {
+    const id = Date.now();
+    setTimers(t => ({ ...t, [id]: minutes * 60 }));
+    const iv = setInterval(() => {
+      setTimers(t => {
+        const remaining = (t[id] || 0) - 1;
+        if (remaining <= 0) {
+          clearInterval(iv);
+          speak("Timer done!");
+          const { [id]: _, ...rest } = t;
+          return rest;
+        }
+        return { ...t, [id]: remaining };
+      });
+    }, 1000);
+    intervalsRef.current[id] = iv;
+    speak(`Timer set for ${minutes} minute${minutes > 1 ? "s" : ""}`);
+  }, [speak]);
+
+  const askSubstitute = useCallback(async (ingredient: string) => {
+    setSubLoading(true); setSubResult("");
+    try {
+      const res = await fetch("/api/substitute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ingredient, recipeName: recipe.name, step: recipe.steps[step] }),
+      });
+      const data = await res.json();
+      const msg = data.substitute || data.error || "No suggestion";
+      setSubResult(msg + (data.tip ? ` ${data.tip}` : ""));
+      speak(msg);
+    } catch { setSubResult("Couldn't get substitute"); }
+    finally { setSubLoading(false); }
+  }, [recipe.name, recipe.steps, step, speak]);
+
+  // Voice recognition
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = false;
+    r.onresult = (e: any) => {
+      const t = e.results[e.results.length - 1][0].transcript.toLowerCase().trim();
+      if (t.includes("next")) goNext();
+      else if (t.includes("back") || t.includes("previous")) goPrev();
+      else if (t.includes("repeat") || t.includes("again")) readStep(step);
+      else if (t.includes("timer")) {
+        const m = t.match(/(\d+)/);
+        startTimer(m ? parseInt(m[1]) : 5);
+      } else if (t.includes("substitute") || t.includes("replace") || t.includes("don't have")) {
+        const cleaned = t.replace(/(substitute|replace|i don't have|don't have|what can i use instead of)/g, "").trim();
+        if (cleaned) askSubstitute(cleaned);
+      }
+    };
+    r.onend = () => { if (listening) try { r.start(); } catch {} };
+    recognitionRef.current = r;
+    return () => { try { r.stop(); } catch {} };
+  }, [goNext, goPrev, readStep, startTimer, askSubstitute, listening, step]);
+
+  const toggleVoice = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+    } else {
+      try { recognitionRef.current?.start(); setListening(true); } catch {}
+    }
+  };
+
+  // Cleanup timers
+  useEffect(() => {
+    return () => { Object.values(intervalsRef.current).forEach(clearInterval); };
+  }, []);
+
+  const total = recipe.steps.length;
+
+  return (
+    <div className="fixed inset-0 bg-gray-950 z-50 flex flex-col text-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-800">
+        <button onClick={() => { window.speechSynthesis?.cancel(); onExit(); }}
+          className="text-gray-400 hover:text-white text-sm font-medium">✕ Exit</button>
+        <h2 className="font-bold text-sm truncate max-w-[60%]">👨‍🍳 {recipe.name}</h2>
+        <button onClick={toggleVoice}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+            listening ? "bg-red-500 animate-pulse" : "bg-emerald-600 hover:bg-emerald-500"
+          }`}>{listening ? "🎙 Listening" : "🎙 Voice"}</button>
+      </div>
+
+      {/* Timers */}
+      {Object.keys(timers).length > 0 && (
+        <div className="flex gap-2 px-4 py-2 bg-amber-900/50 overflow-x-auto">
+          {Object.entries(timers).map(([id, secs]) => (
+            <div key={id} className="flex items-center gap-2 bg-amber-800 px-3 py-1.5 rounded-full text-sm font-mono shrink-0">
+              <span>⏱ {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</span>
+              <button onClick={() => { clearInterval(intervalsRef.current[Number(id)]); setTimers(t => { const { [Number(id)]: _, ...rest } = t; return rest; }); }}
+                className="text-amber-400 hover:text-white text-xs">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Progress */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <span>Step {step + 1} of {total}</span>
+          <span>{Math.round(((step + 1) / total) * 100)}%</span>
+        </div>
+        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+            style={{ width: `${((step + 1) / total) * 100}%` }} />
+        </div>
+      </div>
+
+      {/* Current Step */}
+      <div className="flex-1 flex items-center justify-center px-6 py-4">
+        <div className="text-center max-w-lg">
+          <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-2xl font-black mx-auto mb-6 shadow-lg shadow-emerald-900/50">
+            {step + 1}
+          </div>
+          <p className={`text-xl sm:text-2xl font-medium leading-relaxed ${speaking ? "text-emerald-400" : "text-white"}`}>
+            {recipe.steps[step]}
+          </p>
+        </div>
+      </div>
+
+      {/* Substitute */}
+      {(subResult || subLoading) && (
+        <div className="mx-4 mb-2 p-3 bg-blue-900/50 border border-blue-700 rounded-xl text-sm">
+          {subLoading ? "🔍 Finding substitute..." : `💡 ${subResult}`}
+        </div>
+      )}
+
+      {/* Substitute input */}
+      <div className="px-4 mb-2">
+        <div className="flex gap-2">
+          <input type="text" value={subQuery} onChange={e => setSubQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && subQuery.trim()) { askSubstitute(subQuery.trim()); setSubQuery(""); } }}
+            placeholder="Don't have an ingredient? Type it..."
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none" />
+          <button onClick={() => { if (subQuery.trim()) { askSubstitute(subQuery.trim()); setSubQuery(""); } }}
+            disabled={subLoading || !subQuery.trim()}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold">Swap</button>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="px-4 pb-6 pt-2">
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={goPrev} disabled={step === 0}
+            className="w-14 h-14 rounded-2xl bg-gray-800 hover:bg-gray-700 disabled:opacity-30 flex items-center justify-center text-xl transition-all">◀</button>
+          <button onClick={() => readStep(step)}
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl transition-all ${
+              speaking ? "bg-emerald-600 shadow-lg shadow-emerald-900/50 scale-105" : "bg-emerald-700 hover:bg-emerald-600"
+            }`}>🔊</button>
+          <button onClick={goNext} disabled={step === total - 1}
+            className="w-14 h-14 rounded-2xl bg-gray-800 hover:bg-gray-700 disabled:opacity-30 flex items-center justify-center text-xl transition-all">▶</button>
+        </div>
+        <div className="flex justify-center gap-3 mt-3">
+          <button onClick={() => startTimer(5)}
+            className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm">⏱ 5 min</button>
+          <button onClick={() => startTimer(10)}
+            className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm">⏱ 10 min</button>
+          <button onClick={() => startTimer(15)}
+            className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm">⏱ 15 min</button>
+        </div>
+        {listening && (
+          <p className="text-center text-xs text-gray-500 mt-3">
+            Say: &quot;next&quot; · &quot;back&quot; · &quot;repeat&quot; · &quot;timer 5&quot; · &quot;substitute coconut milk&quot;
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -234,6 +450,7 @@ export default function Home() {
   const [swappingKey, setSwappingKey] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"plan" | "recipes" | "grocery">("plan");
+  const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
 
   const toggle = (set: Set<string>, setFn: (s: Set<string>) => void) => (v: string) => {
     const next = new Set(set);
@@ -503,7 +720,7 @@ export default function Home() {
           {/* Recipes Tab */}
           {activeTab === "recipes" && (
             <div className="space-y-3">
-              {plan.recipes.length > 0 ? plan.recipes.map((r, i) => <RecipeCard key={i} recipe={r} index={i} />)
+              {plan.recipes.length > 0 ? plan.recipes.map((r, i) => <RecipeCard key={i} recipe={r} index={i} onCook={setCookingRecipe} />)
                 : <div className="text-center py-12 text-gray-400">
                     <p className="text-4xl mb-2">👨‍🍳</p>
                     <p>No recipes returned. Try generating again.</p>
@@ -540,6 +757,7 @@ export default function Home() {
       )}
 
       <footer className="text-center text-xs text-gray-300 mt-10">Meal Planner · AI-powered</footer>
+      {cookingRecipe && <CookMode recipe={cookingRecipe} onExit={() => setCookingRecipe(null)} />}
     </main>
   );
 }
