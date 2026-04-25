@@ -39,7 +39,7 @@ ${diets.length ? `- Diet: ${diets.join(", ")}` : ""}
 ${goals.length ? `- Goals: ${goals.join(", ")}` : ""}
 ${allergies.length ? `- AVOID: ${allergies.join(", ")}` : ""}
 - For ${people} person(s), ~${calories} cal/day, max ${maxPrepTime} min prep per meal
-${proteinTarget ? `- DAILY PROTEIN TARGET: EXACTLY ~${proteinTarget}g protein per day. This is a HARD REQUIREMENT. Each day's total (breakfast+lunch+dinner+snack) protein MUST add up to approximately ${proteinTarget}g. Choose high-protein dishes and generous portions to hit this number. Do NOT return a plan where daily protein is below ${Math.round(proteinTarget * 0.85)}g.` : ""}
+${proteinTarget ? `- DAILY PROTEIN TARGET: ~${proteinTarget}g protein per day. To hit this, you MUST choose high-protein dishes. Do NOT put high protein numbers on low-protein foods. Instead, CHANGE the dish to something protein-rich.` : ""}
 ${freetext ? `- SPECIAL REQUEST FROM USER: ${freetext}` : ""}
 
 CRITICAL RULES:
@@ -50,7 +50,12 @@ CRITICAL RULES:
 5. Vary calories naturally (not every breakfast the same calories)
 6. Stick STRICTLY to ${cuisines.join("/")} cuisine — no fusion or generic "healthy bowls"
 7. For snacks: only suggest things that are either in the available ingredients, simple to make (with recipe), or common store-bought items. Don't assume specialty items like murukku or pappadam are available — add them to the grocery list if used.
-8. ACCURATE MACROS: Protein and fiber values MUST be nutritionally accurate for the dish and portion size. Do NOT inflate numbers. Examples of real values: 1 idli = 2g protein, 100g chicken breast = 31g protein, 1 egg = 6g protein, 100g paneer = 18g protein, 1 cup cooked dal = 12g protein. If the protein target is high, choose genuinely high-protein dishes (egg whites, chicken, fish, Greek yogurt, dal, paneer) rather than inflating numbers on low-protein foods.
+8. ACCURATE NUTRITION — THIS IS THE MOST IMPORTANT RULE:
+   - You MUST report real-world accurate protein/fiber for the dish and portion.
+   - Reference values you MUST follow: plain idli (1 piece, 40g) = 2g protein. Dosa (1 plain) = 3g protein. 100g cooked chicken = 31g protein. 1 whole egg = 6g protein. 100g paneer = 18g protein. 1 cup cooked toor dal = 12g protein. 1 cup cooked rice = 4g protein. 100g Greek yogurt = 10g protein. 100g cooked shrimp = 24g protein. 100g cooked fish = 22g protein.
+   - If a breakfast like "idli with chutney" only has 8g protein, report 8g. Do NOT write 30g.
+   - If the protein target is high, pick DIFFERENT high-protein dishes (egg dosa, chicken keema, paneer bhurji, pesarattu, dal chilla) instead of lying about idli protein.
+   - It is BETTER to not hit the protein target than to report fake numbers. Accuracy over target.
 
 Respond with ONLY valid JSON:
 {
@@ -58,10 +63,10 @@ Respond with ONLY valid JSON:
   "days": [
     {
       "day": "Monday",
-      "breakfast": {"meal": "Authentic dish name (brief description)", "calories": 380, "protein": 30, "fiber": 5},
-      "lunch": {"meal": "Dish name — uses Sunday's batch X", "calories": 520, "protein": 40, "fiber": 8},
-      "dinner": {"meal": "Dish name (key ingredients)", "calories": 480, "protein": 38, "fiber": 6},
-      "snack": {"meal": "Cuisine-appropriate snack", "calories": 180, "protein": 15, "fiber": 3}
+      "breakfast": {"meal": "Pesarattu with Ginger Chutney (2 moong dal crepes)", "calories": 340, "protein": 18, "fiber": 6},
+      "lunch": {"meal": "Chicken Chettinad with Brown Rice (150g chicken, 1 cup rice)", "calories": 520, "protein": 40, "fiber": 4},
+      "dinner": {"meal": "Meen Kulambu with Appam (150g fish curry, 2 appams)", "calories": 450, "protein": 34, "fiber": 3},
+      "snack": {"meal": "Paneer Tikka (80g paneer, spices)", "calories": 200, "protein": 15, "fiber": 1}
     }
   ],
   "recipes": [
