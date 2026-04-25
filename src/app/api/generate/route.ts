@@ -50,6 +50,7 @@ CRITICAL RULES:
 5. Vary calories naturally (not every breakfast the same calories)
 6. Stick STRICTLY to ${cuisines.join("/")} cuisine — no fusion or generic "healthy bowls"
 7. For snacks: only suggest things that are either in the available ingredients, simple to make (with recipe), or common store-bought items. Don't assume specialty items like murukku or pappadam are available — add them to the grocery list if used.
+8. ACCURATE MACROS: Protein and fiber values MUST be nutritionally accurate for the dish and portion size. Do NOT inflate numbers. Examples of real values: 1 idli = 2g protein, 100g chicken breast = 31g protein, 1 egg = 6g protein, 100g paneer = 18g protein, 1 cup cooked dal = 12g protein. If the protein target is high, choose genuinely high-protein dishes (egg whites, chicken, fish, Greek yogurt, dal, paneer) rather than inflating numbers on low-protein foods.
 
 Respond with ONLY valid JSON:
 {
