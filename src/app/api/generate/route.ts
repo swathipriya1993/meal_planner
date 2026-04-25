@@ -39,7 +39,7 @@ ${diets.length ? `- Diet: ${diets.join(", ")}` : ""}
 ${goals.length ? `- Goals: ${goals.join(", ")}` : ""}
 ${allergies.length ? `- AVOID: ${allergies.join(", ")}` : ""}
 - For ${people} person(s), ~${calories} cal/day, max ${maxPrepTime} min prep per meal
-${proteinTarget ? `- DAILY PROTEIN TARGET: ~${proteinTarget}g protein per day. Prioritize high-protein ingredients to hit this target.` : ""}
+${proteinTarget ? `- DAILY PROTEIN TARGET: EXACTLY ~${proteinTarget}g protein per day. This is a HARD REQUIREMENT. Each day's total (breakfast+lunch+dinner+snack) protein MUST add up to approximately ${proteinTarget}g. Choose high-protein dishes and generous portions to hit this number. Do NOT return a plan where daily protein is below ${Math.round(proteinTarget * 0.85)}g.` : ""}
 ${freetext ? `- SPECIAL REQUEST FROM USER: ${freetext}` : ""}
 
 CRITICAL RULES:
@@ -57,10 +57,10 @@ Respond with ONLY valid JSON:
   "days": [
     {
       "day": "Monday",
-      "breakfast": {"meal": "Authentic dish name (brief description)", "calories": 310, "protein": 22, "fiber": 5},
-      "lunch": {"meal": "Dish name — uses Sunday's batch X", "calories": 490, "protein": 35, "fiber": 8},
-      "dinner": {"meal": "Dish name (key ingredients)", "calories": 440, "protein": 30, "fiber": 6},
-      "snack": {"meal": "Cuisine-appropriate snack", "calories": 120, "protein": 8, "fiber": 3}
+      "breakfast": {"meal": "Authentic dish name (brief description)", "calories": 380, "protein": 30, "fiber": 5},
+      "lunch": {"meal": "Dish name — uses Sunday's batch X", "calories": 520, "protein": 40, "fiber": 8},
+      "dinner": {"meal": "Dish name (key ingredients)", "calories": 480, "protein": 38, "fiber": 6},
+      "snack": {"meal": "Cuisine-appropriate snack", "calories": 180, "protein": 15, "fiber": 3}
     }
   ],
   "recipes": [
