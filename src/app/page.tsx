@@ -440,6 +440,7 @@ export default function Home() {
   const [pantry, setPantry] = useState<Set<string>>(new Set());
   const [extraIngredients, setExtraIngredients] = useState("");
   const [mustInclude, setMustInclude] = useState("");
+  const [freetext, setFreetext] = useState("");
   const [people, setPeople] = useState("1");
   const [calories, setCalories] = useState("1800");
   const [maxPrepTime, setMaxPrepTime] = useState("30");
@@ -451,6 +452,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"plan" | "recipes" | "grocery">("plan");
   const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const toggle = (set: Set<string>, setFn: (s: Set<string>) => void) => (v: string) => {
     const next = new Set(set);
@@ -471,14 +475,14 @@ export default function Home() {
   const buildContext = () => ({
     cuisines: [...cuisines], diets: [...diets], goals: [...goals],
     allergies: [...allergies], proteins: [...proteins], carbs: [...carbs],
-    pantry: [...pantry], extraIngredients, mustInclude,
+    pantry: [...pantry], extraIngredients, mustInclude, freetext,
     people: Number(people), calories: Number(calories), maxPrepTime: Number(maxPrepTime),
     proteinTarget: proteinTarget ? Number(proteinTarget) : null,
   });
 
   const generate = async () => {
     if (cuisines.size === 0) { setError("Pick at least one cuisine"); return; }
-    setLoading(true); setError(""); setPlan(null); setRawPlan("");
+    setLoading(true); setError(""); setPlan(null); setRawPlan(""); setChatMessages([]);
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 120000);
@@ -521,6 +525,31 @@ export default function Home() {
       }
     } catch (e: any) { setError(e.message); }
     finally { setSwappingKey(""); }
+  };
+
+  const refinePlan = async () => {
+    if (!chatInput.trim() || !plan) return;
+    const msg = chatInput.trim();
+    setChatInput("");
+    setChatMessages(m => [...m, { role: "user", text: msg }]);
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, message: msg, context: buildContext() }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      const data = await res.json();
+      if (data.plan?.days) {
+        setPlan(data.plan);
+        setChatMessages(m => [...m, { role: "ai", text: data.reply || "Done! Plan updated." }]);
+      } else {
+        setChatMessages(m => [...m, { role: "ai", text: data.reply || "I couldn't update the plan. Try rephrasing?" }]);
+      }
+    } catch (e: any) {
+      setChatMessages(m => [...m, { role: "ai", text: `Error: ${e.message}` }]);
+    } finally { setChatLoading(false); }
   };
 
   const totalCals = plan?.days.map(d => d.breakfast.calories + d.lunch.calories + d.dinner.calories + d.snack.calories);
@@ -645,6 +674,17 @@ export default function Home() {
         </Section>
       </div>
 
+      {/* Anything else */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-bold text-gray-800">💬 Anything else?</span>
+          <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
+        </div>
+        <textarea value={freetext} onChange={(e) => setFreetext(e.target.value)} rows={2}
+          placeholder="e.g. I'm training for a marathon, need extra carbs on long run days..."
+          className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 bg-gray-50 resize-none" />
+      </div>
+
       {/* Generate Button */}
       {error && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-3 border border-red-100">{error}</div>}
       <button onClick={generate} disabled={loading}
@@ -753,6 +793,44 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-bold mb-3">📋 Your Weekly Plan</h2>
           <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-700">{rawPlan}</div>
+        </div>
+      )}
+
+      {/* Chat Refinement */}
+      {plan && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-4">
+          <div className="px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 border-b border-gray-100">
+            <h2 className="font-bold text-gray-800 text-sm">💬 Refine your plan</h2>
+            <p className="text-xs text-gray-500">Tell me what to change — I&apos;ll update the plan</p>
+          </div>
+          {chatMessages.length > 0 && (
+            <div className="max-h-60 overflow-y-auto px-4 py-3 space-y-2">
+              {chatMessages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
+                    m.role === "user"
+                      ? "bg-emerald-600 text-white rounded-br-sm"
+                      : "bg-gray-100 text-gray-700 rounded-bl-sm"
+                  }`}>{m.text}</div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 text-gray-500 px-3 py-2 rounded-xl rounded-bl-sm text-sm">Updating plan...</div>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="p-3 border-t border-gray-100">
+            <div className="flex gap-2">
+              <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !chatLoading) refinePlan(); }}
+                placeholder="Make Wednesday lighter, add more iron-rich meals..."
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-gray-50" />
+              <button onClick={refinePlan} disabled={chatLoading || !chatInput.trim()}
+                className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all">Send</button>
+            </div>
+          </div>
         </div>
       )}
 
