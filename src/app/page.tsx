@@ -457,21 +457,29 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [swappingKey, setSwappingKey] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"plan" | "recipes" | "grocery">("plan");
+  const [activeTab, setActiveTab] = useState<"plan" | "recipes" | "grocery" | "saved">("plan");
   const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [ratings, setRatings] = useState<Record<string, 'up' | 'down'>>({});
+  const [savedRecipes, setSavedRecipes] = useState<(Recipe & { calories?: number; protein?: number; cuisine?: string })[]>([]);
+  const [recipeInput, setRecipeInput] = useState("");
+  const [parsingRecipe, setParsingRecipe] = useState(false);
 
   // Load ratings from localStorage
   useEffect(() => {
     try { const s = localStorage.getItem('meal-planner-ratings'); if (s) setRatings(JSON.parse(s)); } catch {}
+    try { const s = localStorage.getItem('meal-planner-saved-recipes'); if (s) setSavedRecipes(JSON.parse(s)); } catch {}
   }, []);
   // Save ratings to localStorage
   useEffect(() => {
     try { localStorage.setItem('meal-planner-ratings', JSON.stringify(ratings)); } catch {}
   }, [ratings]);
+  // Save recipes to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('meal-planner-saved-recipes', JSON.stringify(savedRecipes)); } catch {}
+  }, [savedRecipes]);
 
   // Load saved plan and preferences on mount
   useEffect(() => {
@@ -521,6 +529,23 @@ export default function Home() {
   const clearSavedPlan = () => {
     localStorage.removeItem("meal-planner-data");
     setPlan(null); setRawPlan("");
+  };
+
+  const parseAndSaveRecipe = async () => {
+    if (!recipeInput.trim()) return;
+    setParsingRecipe(true);
+    try {
+      const res = await fetch("/api/parse-recipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: recipeInput.trim() }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      const data = await res.json();
+      setSavedRecipes(prev => [...prev, data]);
+      setRecipeInput("");
+    } catch (e: any) { setError(e.message); }
+    finally { setParsingRecipe(false); }
   };
 
   const toggle = (set: Set<string>, setFn: (s: Set<string>) => void) => (v: string) => {
@@ -765,6 +790,24 @@ export default function Home() {
       </button>
       {loading && <LoadingSkeleton />}
 
+      {/* Saved Recipes - always accessible */}
+      {!plan && !loading && savedRecipes.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+          <h3 className="font-bold text-gray-800 text-sm mb-2">📌 My Saved Recipes ({savedRecipes.length})</h3>
+          <div className="space-y-2">
+            {savedRecipes.slice(0, 3).map((r, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                  <span className="text-sm font-medium text-gray-800">{r.name}</span>
+                  <span className="text-xs text-gray-400 ml-2">{r.cuisine}</span>
+                </div>
+                <button onClick={() => setCookingRecipe(r)} className="text-xs text-emerald-600 font-semibold">Cook →</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Results */}
       {plan && (
         <div className="space-y-4">
@@ -794,6 +837,7 @@ export default function Home() {
               ["plan", "📋 Plan", ""],
               ["recipes", "👨‍🍳 Recipes", `${plan.recipes.length}`],
               ["grocery", "🛒 Shop", `${plan.groceryList.length}`],
+              ["saved", "📌 Saved", `${savedRecipes.length}`],
             ] as const).map(([key, label, count]) => (
               <button key={key} onClick={() => setActiveTab(key as any)}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
@@ -871,6 +915,60 @@ export default function Home() {
                   ))}
                 </div>
               ) : <p className="text-gray-400 text-center py-8">No extra groceries needed! 🎉</p>}
+            </div>
+          )}
+
+          {/* Saved Recipes Tab */}
+          {activeTab === "saved" && (
+            <div className="space-y-3">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                <h3 className="font-bold text-gray-800 text-sm mb-2">📌 Save a Recipe</h3>
+                <p className="text-xs text-gray-500 mb-3">Paste a recipe from Instagram, TikTok, or anywhere — AI will extract it</p>
+                <textarea value={recipeInput} onChange={e => setRecipeInput(e.target.value)} rows={4}
+                  placeholder={"Paste recipe here...\n\nE.g. 'Butter chicken: marinate 500g chicken in yogurt + spices 1hr. Fry onions, add tomato puree, cream, cook 20min. Serve with naan.'"}
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 bg-gray-50 resize-none" />
+                <button onClick={parseAndSaveRecipe} disabled={parsingRecipe || !recipeInput.trim()}
+                  className="mt-2 w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-sm hover:shadow-lg disabled:opacity-50 transition-all">
+                  {parsingRecipe ? "✨ Extracting recipe..." : "✨ Save Recipe"}
+                </button>
+              </div>
+              {savedRecipes.length > 0 ? savedRecipes.map((r, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-bold text-gray-800">{r.name}</h4>
+                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                        {r.time && <span>⏱ {r.time}</span>}
+                        {r.calories && <span>🔥 {r.calories} cal</span>}
+                        {r.protein && <span>💪 {r.protein}g protein</span>}
+                        {r.cuisine && <span>🌍 {r.cuisine}</span>}
+                      </div>
+                    </div>
+                    <button onClick={() => setSavedRecipes(prev => prev.filter((_, j) => j !== i))}
+                      className="text-gray-300 hover:text-red-500 text-sm">✕</button>
+                  </div>
+                  {r.ingredients && (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Ingredients</p>
+                      <div className="flex flex-wrap gap-1">
+                        {r.ingredients.slice(0, 6).map((ing, j) => (
+                          <span key={j} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{ing}</span>
+                        ))}
+                        {r.ingredients.length > 6 && <span className="text-xs text-gray-400">+{r.ingredients.length - 6} more</span>}
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => setCookingRecipe(r)}
+                    className="mt-3 w-full py-2 bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-xl text-sm font-semibold transition-colors">
+                    👨‍🍳 Cook this
+                  </button>
+                </div>
+              )) : (
+                <div className="text-center py-12 text-gray-400">
+                  <p className="text-4xl mb-2">📌</p>
+                  <p className="text-sm">No saved recipes yet. Paste one above!</p>
+                </div>
+              )}
             </div>
           )}
         </div>
