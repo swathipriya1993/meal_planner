@@ -456,6 +456,56 @@ export default function Home() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
+  // Load saved plan and preferences on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("meal-planner-data");
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.plan?.days) setPlan(data.plan);
+        if (data.context) {
+          if (data.context.cuisines?.length) setCuisines(new Set(data.context.cuisines));
+          if (data.context.diets?.length) setDiets(new Set(data.context.diets));
+          if (data.context.goals?.length) setGoals(new Set(data.context.goals));
+          if (data.context.allergies?.length) setAllergies(new Set(data.context.allergies));
+          if (data.context.proteins?.length) setProteins(new Set(data.context.proteins));
+          if (data.context.carbs?.length) setCarbs(new Set(data.context.carbs));
+          if (data.context.pantry?.length) setPantry(new Set(data.context.pantry));
+          if (data.context.extraIngredients) setExtraIngredients(data.context.extraIngredients);
+          if (data.context.mustInclude) setMustInclude(data.context.mustInclude);
+          if (data.context.freetext) setFreetext(data.context.freetext);
+          if (data.context.people) setPeople(String(data.context.people));
+          if (data.context.calories) setCalories(String(data.context.calories));
+          if (data.context.maxPrepTime) setMaxPrepTime(String(data.context.maxPrepTime));
+          if (data.context.proteinTarget) setProteinTarget(String(data.context.proteinTarget));
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Save plan and preferences whenever they change
+  useEffect(() => {
+    if (!plan) return;
+    try {
+      localStorage.setItem("meal-planner-data", JSON.stringify({
+        plan,
+        context: {
+          cuisines: [...cuisines], diets: [...diets], goals: [...goals],
+          allergies: [...allergies], proteins: [...proteins], carbs: [...carbs],
+          pantry: [...pantry], extraIngredients, mustInclude, freetext,
+          people: Number(people), calories: Number(calories),
+          maxPrepTime: Number(maxPrepTime), proteinTarget: proteinTarget ? Number(proteinTarget) : null,
+        },
+        savedAt: new Date().toISOString(),
+      }));
+    } catch {}
+  }, [plan, cuisines, diets, goals, allergies, proteins, carbs, pantry, extraIngredients, mustInclude, freetext, people, calories, maxPrepTime, proteinTarget]);
+
+  const clearSavedPlan = () => {
+    localStorage.removeItem("meal-planner-data");
+    setPlan(null); setRawPlan("");
+  };
+
   const toggle = (set: Set<string>, setFn: (s: Set<string>) => void) => (v: string) => {
     const next = new Set(set);
     next.has(v) ? next.delete(v) : next.add(v);
@@ -701,6 +751,16 @@ export default function Home() {
       {/* Results */}
       {plan && (
         <div className="space-y-4">
+          {/* Saved indicator */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Auto-saved locally
+            </span>
+            <button onClick={clearSavedPlan} className="text-xs text-red-400 hover:text-red-600 transition-colors">
+              Clear saved plan
+            </button>
+          </div>
           {/* Tab Bar */}
           <div className="flex gap-1 bg-gray-100/80 p-1 rounded-2xl sticky top-2 z-10 backdrop-blur-sm">
             {([
