@@ -18,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#16a34a" />
         <script src="https://va.vercel-scripts.com/v1/script.debug.js" defer></script>
       </head>
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>{children}</body>
+      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
+        {children}
+        <script dangerouslySetInnerHTML={{__html:`if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js')`}}/>
+      </body>
     </html>
   );
 }
