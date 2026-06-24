@@ -6,7 +6,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Set OPENAI_API_KEY in .env.local" }, { status: 500 });
   }
 
-  const { text } = await req.json();
+  let { text } = await req.json();
+
+  // If it's a URL, fetch the page content
+  if (text.trim().match(/^https?:\/\//)) {
+    try {
+      const res = await fetch(text.trim(), { headers: { "User-Agent": "Mozilla/5.0" } });
+      const html = await res.text();
+      // Strip HTML tags, keep text content (limit to 3000 chars to save tokens)
+      text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 3000);
+    } catch {
+      return NextResponse.json({ error: "Couldn't fetch that URL. Try pasting the recipe text instead." }, { status: 400 });
+    }
+  }
 
   const prompt = `Extract a recipe from the following text. The text might be a caption from Instagram/TikTok, a pasted recipe, or informal notes. Extract whatever you can.
 

@@ -923,9 +923,9 @@ export default function Home() {
             <div className="space-y-3">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                 <h3 className="font-bold text-gray-800 text-sm mb-2">📌 Save a Recipe</h3>
-                <p className="text-xs text-gray-500 mb-3">Paste a recipe from Instagram, TikTok, or anywhere — AI will extract it</p>
-                <textarea value={recipeInput} onChange={e => setRecipeInput(e.target.value)} rows={4}
-                  placeholder={"Paste recipe here...\n\nE.g. 'Butter chicken: marinate 500g chicken in yogurt + spices 1hr. Fry onions, add tomato puree, cream, cook 20min. Serve with naan.'"}
+                <p className="text-xs text-gray-500 mb-3">Paste a URL, an Instagram caption, or even just a dish name — AI figures it out</p>
+                <textarea value={recipeInput} onChange={e => setRecipeInput(e.target.value)} rows={3}
+                  placeholder={"Paste a recipe URL, Instagram caption, or just a dish name like 'Chicken Biryani'"}
                   className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 bg-gray-50 resize-none" />
                 <button onClick={parseAndSaveRecipe} disabled={parsingRecipe || !recipeInput.trim()}
                   className="mt-2 w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-sm hover:shadow-lg disabled:opacity-50 transition-all">
