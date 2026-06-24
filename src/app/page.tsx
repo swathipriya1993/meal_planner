@@ -63,8 +63,9 @@ const DAY_EMOJI: Record<string, string> = {
   Monday: "🟢", Tuesday: "🔵", Wednesday: "🟣", Thursday: "🟠", Friday: "🔴", Saturday: "🟡", Sunday: "⚪",
 };
 
-function MealTable({ days, onSwap, swappingKey }: {
+function MealTable({ days, onSwap, swappingKey, ratings, onRate }: {
   days: DayPlan[]; onSwap: (day: string, type: string) => void; swappingKey: string;
+  ratings: Record<string, 'up' | 'down'>; onRate: (day: string, type: string, rating: 'up' | 'down') => void;
 }) {
   return (
     <>
@@ -97,6 +98,12 @@ function MealTable({ days, onSwap, swappingKey }: {
                       <td key={type} className="p-3 group relative">
                         <div className="font-medium text-gray-800 text-xs leading-snug pr-6">{meal.meal}</div>
                         <div className="text-[10px] text-emerald-600 mt-0.5">{meal.calories} cal · {meal.protein||0}g P · {meal.fiber||0}g F</div>
+                        <div className="flex gap-1 mt-1">
+                          <button onClick={() => onRate(d.day, type, 'up')}
+                            className={`text-[10px] px-1 rounded ${ratings[`${d.day}-${type}`] === 'up' ? 'bg-green-100 text-green-600' : 'text-gray-300 hover:text-green-500'}`}>👍</button>
+                          <button onClick={() => onRate(d.day, type, 'down')}
+                            className={`text-[10px] px-1 rounded ${ratings[`${d.day}-${type}`] === 'down' ? 'bg-red-100 text-red-600' : 'text-gray-300 hover:text-red-500'}`}>👎</button>
+                        </div>
                         <button onClick={() => onSwap(d.day, type)}
                           disabled={swappingKey === `${d.day}-${type}`}
                           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg bg-white border border-gray-200 text-[10px] text-gray-400 hover:text-emerald-600 hover:border-emerald-300 transition-all shadow-sm flex items-center justify-center"
@@ -455,6 +462,16 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [ratings, setRatings] = useState<Record<string, 'up' | 'down'>>({});
+
+  // Load ratings from localStorage
+  useEffect(() => {
+    try { const s = localStorage.getItem('meal-planner-ratings'); if (s) setRatings(JSON.parse(s)); } catch {}
+  }, []);
+  // Save ratings to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('meal-planner-ratings', JSON.stringify(ratings)); } catch {}
+  }, [ratings]);
 
   // Load saved plan and preferences on mount
   useEffect(() => {
@@ -757,9 +774,19 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
               Auto-saved locally
             </span>
-            <button onClick={clearSavedPlan} className="text-xs text-red-400 hover:text-red-600 transition-colors">
-              Clear saved plan
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={async () => {
+                const avg = Math.round(plan.days.reduce((s, d) => s + d.breakfast.calories + d.lunch.calories + d.dinner.calories + d.snack.calories, 0) / plan.days.length);
+                const text = plan.days.map(d => `${d.day}: ${d.breakfast.meal}, ${d.lunch.meal}, ${d.dinner.meal}`).join('\n') + `\n\nAvg: ${avg} cal/day`;
+                if (navigator.share) { try { await navigator.share({ title: 'My Meal Plan', text }); } catch {} }
+                else { await navigator.clipboard.writeText(text); alert('Plan copied to clipboard!'); }
+              }} className="text-xs text-emerald-500 hover:text-emerald-700 transition-colors">
+                📤 Share Plan
+              </button>
+              <button onClick={clearSavedPlan} className="text-xs text-red-400 hover:text-red-600 transition-colors">
+                Clear saved plan
+              </button>
+            </div>
           </div>
           {/* Tab Bar */}
           <div className="flex gap-1 bg-gray-100/80 p-1 rounded-2xl sticky top-2 z-10 backdrop-blur-sm">
@@ -811,7 +838,7 @@ export default function Home() {
 
               {/* Day Table/Cards */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <MealTable days={plan.days} onSwap={swapMeal} swappingKey={swappingKey} />
+                <MealTable days={plan.days} onSwap={swapMeal} swappingKey={swappingKey} ratings={ratings} onRate={(day, type, rating) => setRatings(r => ({ ...r, [`${day}-${type}`]: rating }))} />
                 <p className="text-xs text-gray-400 text-center mt-3">Hover a meal → 🔄 to swap</p>
               </div>
             </div>
