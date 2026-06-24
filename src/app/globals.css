@@ -26,3 +26,17 @@ input[type="checkbox"] { accent-color: #059669; }
 /* Shimmer for loading state */
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .shimmer { background: linear-gradient(90deg, #f0fdf4 25%, #d1fae5 50%, #f0fdf4 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+
+/* Print styles for PDF export */
+@media print {
+  body * { visibility: hidden; }
+  #printable-plan { visibility: visible !important; display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+  #printable-plan * { visibility: visible; }
+  #printable-plan table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  #printable-plan th, #printable-plan td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+  #printable-plan th { background: #059669 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #printable-plan h1 { font-size: 18px; margin-bottom: 4px; }
+  #printable-plan h2 { font-size: 14px; margin-top: 16px; margin-bottom: 8px; }
+  #printable-plan ul { padding-left: 20px; font-size: 12px; }
+  #printable-plan li { margin-bottom: 2px; }
+}

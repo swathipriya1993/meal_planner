@@ -818,6 +818,9 @@ export default function Home() {
               Auto-saved locally
             </span>
             <div className="flex items-center gap-3">
+              <button onClick={() => window.print()} className="text-xs text-emerald-500 hover:text-emerald-700 transition-colors">
+                📄 Download PDF
+              </button>
               <button onClick={async () => {
                 const avg = Math.round(plan.days.reduce((s, d) => s + d.breakfast.calories + d.lunch.calories + d.dinner.calories + d.snack.calories, 0) / plan.days.length);
                 const text = plan.days.map(d => `${d.day}: ${d.breakfast.meal}, ${d.lunch.meal}, ${d.dinner.meal}`).join('\n') + `\n\nAvg: ${avg} cal/day`;
@@ -1021,6 +1024,48 @@ export default function Home() {
 
       <footer className="text-center text-xs text-gray-300 mt-10">Meal Planner · AI-powered</footer>
       {cookingRecipe && <CookMode recipe={cookingRecipe} onExit={() => setCookingRecipe(null)} />}
+
+      {/* Hidden printable plan for PDF export */}
+      {plan && (
+        <div id="printable-plan" className="hidden print:block">
+          <h1>Weekly Meal Plan</h1>
+          <p>Avg {avgCals} cal/day · {avgProt}g protein/day</p>
+          <table>
+            <thead>
+              <tr><th>Day</th><th>Breakfast</th><th>Lunch</th><th>Dinner</th><th>Snack</th></tr>
+            </thead>
+            <tbody>
+              {plan.days.map(d => (
+                <tr key={d.day}>
+                  <td><strong>{d.day}</strong></td>
+                  <td>{d.breakfast.meal}<br/><small>{d.breakfast.calories} cal</small></td>
+                  <td>{d.lunch.meal}<br/><small>{d.lunch.calories} cal</small></td>
+                  <td>{d.dinner.meal}<br/><small>{d.dinner.calories} cal</small></td>
+                  <td>{d.snack.meal}<br/><small>{d.snack.calories} cal</small></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {plan.groceryList.length > 0 && (
+            <>
+              <h2>🛒 Shopping List</h2>
+              <ul>{plan.groceryList.map((item, i) => <li key={i}>{item}</li>)}</ul>
+            </>
+          )}
+          {plan.recipes.length > 0 && (
+            <>
+              <h2>👨🍳 Recipes</h2>
+              {plan.recipes.map((r, i) => (
+                <div key={i} style={{ marginBottom: 12 }}>
+                  <strong>{r.name}</strong> ({r.time})<br/>
+                  <em>Ingredients:</em> {r.ingredients.join(', ')}<br/>
+                  <em>Steps:</em> {r.steps.map((s, j) => `${j+1}. ${s}`).join(' ')}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </main>
   );
 }
