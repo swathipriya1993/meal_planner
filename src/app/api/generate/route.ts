@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
 
 Create a practical weekly meal plan (Mon-Sun) using ONLY authentic ${cuisines.join("/")} dishes.
 
+ABSOLUTE RULE: You must ONLY suggest dishes from ${cuisines.join(" and ")} cuisine. Do NOT include dishes from any other cuisine. If the user selected "North Indian", every single dish must be North Indian (e.g., dal makhani, chole, rajma, aloo gobi, butter chicken, paratha, poha). Do NOT include South Indian dishes like dosa, idli, sambar, rasam unless "South Indian" is explicitly in the list. This is the most critical rule.
+
 ${mustInclude ? `MUST-INCLUDE DISHES: The user specifically wants to make: ${mustInclude}. Build the weekly plan around these dishes. Use leftovers from these dishes in other meals across the week. Include full recipes for these dishes.` : ""}
 
 INPUTS:

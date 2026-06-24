@@ -641,7 +641,7 @@ export default function Home() {
       {/* Form Card */}
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 px-5 py-2 mb-6">
         <Section title="Cuisines" icon="🌍" defaultOpen={true}>
-          <Chips options={CUISINES} selected={cuisines} toggle={toggle(cuisines, setCuisines)} />
+          <Chips options={[...CUISINES, ...[...cuisines].filter(c => !CUISINES.includes(c))]} selected={cuisines} toggle={toggle(cuisines, setCuisines)} />
           <div className="flex gap-2 mt-3">
             <input type="text" value={customCuisine} onChange={(e) => setCustomCuisine(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCustomCuisine()}
